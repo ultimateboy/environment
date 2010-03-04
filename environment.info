@@ -1,0 +1,6 @@
+; $Id$
+name = Environment
+description = Sets the environment variable for a site instance
+
+version = "6.x-1.0"
+core = "6.x"
