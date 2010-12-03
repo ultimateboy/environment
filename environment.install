@@ -1,0 +1,40 @@
+<?php
+// $Id$
+
+/**
+ * @file
+ * Handles installation of the Environment module.
+ */
+
+/**
+ * Implementation of hook_install().
+ */
+function environment_install() {
+  // New module weights in core: put environment as the very last in the chain.
+  db_query("UPDATE {system} SET weight = -100 WHERE name = 'environment'");
+}
+
+/**
+ * Implementation of hook_uninstall().
+ */
+function environment_uninstall() {
+  variable_del('environment');
+}
+
+/**
+ * Implementation of hook_requirements().
+ */
+function environment_requirements($phase) {
+  if ($phase == 'runtime') {
+    if (variable_get('environment_require_override', FALSE)) {
+      $t = get_t();
+      $requirements['environment_require_override'] = array(
+        'title'       => $t('Environment Override'),
+        'description' => $t("You should override the 'environment_override' variable in your settings.php file to indicate the server environment this site is in."),
+        'value'       => $t('Missing'),
+        'severity'    => REQUIREMENT_ERROR,
+      );
+      return $requirements;
+    }
+  }
+}
