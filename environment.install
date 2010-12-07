@@ -26,15 +26,25 @@ function environment_uninstall() {
  */
 function environment_requirements($phase) {
   if ($phase == 'runtime') {
+    $t = get_t();
+    $requirements = array();
     if (variable_get('environment_require_override', FALSE)) {
-      $t = get_t();
       $requirements['environment_require_override'] = array(
         'title'       => $t('Environment Override'),
         'description' => $t("You should override the 'environment_override' variable in your settings.php file to indicate the server environment this site is in."),
         'value'       => $t('Missing'),
         'severity'    => REQUIREMENT_ERROR,
       );
-      return $requirements;
     }
+    $env_override = variable_get('environment_override', NULL);
+    if (!is_null($env_override) && $env_override != variable_get('environment', NULL)) {
+      $requirements['environment_override'] = array(
+        'title'       => $t('Environment Mismatch'),
+        'description' => $t("The environment override set in your settings.php file does not match the current system environment. Please !link or correct this setting.", array('!link' => l($t('switch environments'), 'admin/settings/environment/switch/' . $env_override))),
+        'value'       => $t('Mismatch'),
+        'severity'    => REQUIREMENT_ERROR,
+      );
+    }
+    return $requirements;
   }
 }
