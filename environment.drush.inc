@@ -55,7 +55,9 @@ function environment_drush_help($section) {
  * Drush callback function to show environment
  */
 function drush_environment() {
-  drush_print(environment_current(TRUE, 'label'));
+  $current_env = variable_get('environment', NULL);
+
+  drush_print($current_env === NULL ? 'None' : $current_env);
 }
 
 /**
@@ -66,7 +68,7 @@ function drush_environment_switch() {
     $force = drush_get_option('force');
 
     $target_env   = $args[0];
-    $current_env  = environment_current();
+    $current_env  = variable_get('environment', NULL);
     $env_override = variable_get('environment_override', NULL);
 
     if (!$force && $current_env == $target_env) {
