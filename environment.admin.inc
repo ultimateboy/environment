@@ -10,11 +10,12 @@ function environment_admin_settings() {
   $form = array();
 
   $env_override = variable_get('environment_override', NULL);
+  $env_current = environment_current();
   if ($env_override) {
     $form['environment'] = array(
       '#type'  => 'item',
       '#title' => t('Current Environment'),
-      '#value' => check_plain(variable_get('environment', 'none')),
+      '#value' => $env_current,
     );
     $form['environment_override'] = array(
       '#type'  => 'item',
@@ -26,8 +27,8 @@ function environment_admin_settings() {
     $form['environment'] = array(
       '#type'          => 'select',
       '#title'         => t('Environment'),
-      '#options'       => drupal_map_assoc(array_keys(environment_get())),
-      '#default_value' => variable_get('environment', NULL),
+      '#options'       => _environment_options(),
+      '#default_value' => $env_current,
     );
   }
   $form['environment_require_override'] = array(
@@ -36,7 +37,6 @@ function environment_admin_settings() {
     '#description'   => t('Used to require that an environment is set in the settings.php file.'),
     '#default_value' => variable_get('environment_require_override', FALSE),
   );
-
   $form['#submit'][] = 'environment_switch_environment_submit';
   return system_settings_form($form);
 }
@@ -48,7 +48,7 @@ function environment_switch_environment_submit($form, &$form_state) {
   if (!$form_state['values']['environment_require_override']
     && $form['environment']['#default_value'] != $form_state['values']['environment']) {
 
-    $result = environment_switch($values['environment']);
+    $result = environment_switch($form_state['values']['environment'], $form['environment']['#default_value']);
     foreach ($result['messages'] as $message) {
       drupal_set_message(t(check_plain($message)));
     }
@@ -62,7 +62,7 @@ function environment_switch_environment_submit($form, &$form_state) {
  *  The environment being switched to.
  */
 function environment_switch_confirm(&$form_state, $environment) {
-  if (!environment_get($environment)) {
+  if (empty($environment)) {
     drupal_set_message(t('Invalid environment "%environment". You cannot switch to an undefined environment.', array('%environment' => $environment)), 'warning');
     drupal_goto('admin/settings/environment');
   }
@@ -76,6 +76,6 @@ function environment_switch_confirm(&$form_state, $environment) {
  * Handler for switch environment confirmation.
  */
 function environment_switch_confirm_submit($form, &$form_state) {
-  environment_switch($form['environment']['#value']);
+  environment_switch($form['environment']['#value'], environment_current());
   $form_state['redirect'] = 'admin/settings/environment';
 }

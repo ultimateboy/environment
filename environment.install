@@ -19,6 +19,7 @@ function environment_install() {
  */
 function environment_uninstall() {
   variable_del('environment');
+  variable_del('environment_require_override');
 }
 
 /**
