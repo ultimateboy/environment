@@ -6,6 +6,20 @@
  * Module for handling changes in server environments
  */
 
+if (module_exists('context')) {
+  include_once('plugins/environment.context.inc');
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function environment_init() {
+  // Trigger environment context condition.
+  if (module_exists('context') && $plugin = context_get_plugin('condition', 'environment')) {
+    $plugin->execute(environment_current());
+  }
+}
+
 /**
  * Implementation of hook_menu().
  */
