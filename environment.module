@@ -9,6 +9,9 @@
 if (module_exists('context')) {
   include_once('plugins/environment.context.inc');
 }
+if (module_exists('token')) {
+  include_once('plugins/environment.token.inc');  
+}
 
 /**
  * Implementation of hook_init().
