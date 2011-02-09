@@ -103,11 +103,16 @@ function drush_environment_switch($target_env = NULL) {
 
   drush_print("Switching the environment to {$target_env}...");
 
-  $result   = environment_switch($target_env, $force);
-  $messages = $result['messages'];
+  if (!drush_get_context('DRUSH_SIMULATE')) {
+    $result   = environment_switch($target_env, $force);
+    $messages = $result['messages'];
 
-  foreach ($messages as $message) {
-    drush_print('- ' . $message);
+    foreach ($messages as $message) {
+      drush_print('- ' . $message);
+    }
+  }
+  else {
+    $result['result'] = TRUE;
   }
 
   if ($result['result']) {
