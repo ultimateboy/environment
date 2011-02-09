@@ -15,7 +15,8 @@ if (module_exists('context')) {
  */
 function environment_init() {
   // Trigger environment context condition.
-  if (module_exists('context') && $plugin = context_get_plugin('condition', 'environment')) {
+  if (module_exists('context') && function_exists('context_get_plugin')
+      && $plugin = context_get_plugin('condition', 'environment')) {
     $plugin->execute(environment_current());
   }
 }
