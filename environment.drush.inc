@@ -85,6 +85,9 @@ function drush_environment_switch($target_env = NULL) {
     }
     $target_env = drush_choice($options);
   }
+  if (!$target_env) {
+    return;
+  }
 
   $force = drush_get_option('force');
   $current_env  = environment_current();
