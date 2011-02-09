@@ -41,14 +41,15 @@ function environment_drush_command() {
  */
 function environment_drush_help($section) {
   switch ($section) {
+    case 'meta:environment:title':
+      return dt('Environment commands');
+    case 'meta:environment:summary':
+      return dt('Review and control the site environment.');
     case 'drush:environment':
-      $help = dt("Shows the current environment.");
-      break;
+      return dt("Shows the current environment.");
     case 'drush:environment-switch':
-      $help = dt("Switches the environment to the target environment.");
-      break;
+      return dt("Switches the environment to the target environment.");
   }
-  return $help;
 }
 
 /**
