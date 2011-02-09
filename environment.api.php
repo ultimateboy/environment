@@ -19,6 +19,12 @@
  * environments should not have developer/site-builder oriented modules enabled,
  * such as administrative UI modules.
  *
+ * When defining your state change actions, be careful to account for a given
+ * state always consisting of the same behaviors and configuration, regardless
+ * of how it returns to that state (which previous environment it was in.) Be
+ * careful that you do not *disable* any modules in one environment that
+ * implement a necessary instance of hook_environment_switch().
+ *
  * @param $target_env
  *  The name of the environment being activated.
  * @param $current_env
