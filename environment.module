@@ -172,6 +172,9 @@ function environment_load($env = NULL, $reset = FALSE) {
   if (!isset($environments) || $reset) {
     $environments  = module_invoke_all('environment');
     $environments = array_merge($environments, variable_get('environment_definitions', array()));
+    foreach ($environments as $name => &$environment) {
+      $environment['name'] = $name;
+    }
     drupal_alter('environment', $environments);
   }
 

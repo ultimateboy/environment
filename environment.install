@@ -46,6 +46,25 @@ function environment_requirements($phase) {
         'severity'    => REQUIREMENT_ERROR,
       );
     }
+
+   $environment = environment_current();
+   if ($environment && !array_key_exists($environment, environment_load())) {
+      $requirements['environment'] = array(
+        'title'       => $t('Environment'),
+        'description' => $t("The current environment '%environment' is no longer defined in your system.", array('%environment' => $environment)),
+        'value'       => $t('Invalid State'),
+        'severity'    => REQUIREMENT_WARNING,
+      );
+    }
+    elseif ($environment) {
+      $environment = environment_current(TRUE);
+      $requirements['environment'] = array(
+        'title'       => $t('Environment'),
+        'description' => isset($environment['description']) ? $environment['description'] : '',
+        'value'       => $environment['label'],
+        'severity'    => REQUIREMENT_INFO,
+      );
+    }
     return $requirements;
   }
 }
