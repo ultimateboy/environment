@@ -2,5 +2,195 @@
 // $Id$
 
 /**
- * @file Placeholder file.  All functionality exists in the drush command.
+ * @file
+ * Module for handling changes in server environments
  */
+
+if (module_exists('context')) {
+  include_once('plugins/environment.context.inc');
+}
+
+/**
+ * Implementation of hook_init().
+ */
+function environment_init() {
+  // Trigger environment context condition.
+  if (module_exists('context') && $plugin = context_get_plugin('condition', 'environment')) {
+    $plugin->execute(environment_current());
+  }
+}
+
+/**
+ * Implementation of hook_menu().
+ */
+function environment_menu() {
+  $items = array();
+  $items['admin/settings/environment'] = array(
+    'title'            => 'Environment',
+    'description'      => 'Settings for Environment.',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('environment_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file'             => 'environment.admin.inc',
+  );
+  $items['admin/settings/environment/switch/%environment'] = array(
+    'title'            => 'Environment Switch',
+    'description'      => 'Switch the current environment.',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('environment_switch_confirm', 4),
+    'access arguments' => array('administer site configuration'),
+    'file'             => 'environment.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implementation of hook_environment().
+ */
+function environment_environment() {
+  return array(
+    'production' => array(
+      'label' => t('Production'),
+      'allowed' => array(
+        'default' => TRUE,
+      ),
+    ),
+    'development' => array(
+      'label' => t('Develop'),
+      'allowed' => array(
+        'default' => FALSE,
+      ),
+    ),
+  );
+}
+
+/**
+ * Check if something is allowed in the current environment.
+ *
+ * @param $name
+ *   Name of the thing to check if allowed, eg. function.
+ * @param $category
+ *   (optional) Category of the thing to check for, eg. name of module. Defaults to 'other'.
+ * @param $default
+ *   (optional) What the default should be if no environment value is found. Defaults to FALSE.
+ *
+ * @return
+ *   TRUE or FALSE for whether the thing is allowed.
+ */
+function environment_allowed($name, $category = 'other', $default = FALSE) {
+  $env = environment_current(TRUE);
+  if (!empty($env)) {
+    if (!empty($env[$category])) {
+      if (isset($env[$category][$name])) {
+        $result = $env[$category][$name];
+      }
+      elseif (isset($env[$category]['default'])) {
+        $result = $env[$category]['default'];
+      }
+    }
+    if (!isset($result) && isset($env['default'])) {
+      $result = $env['default'];
+    }
+  }
+  if (!isset($result)) {
+    $result = $default;
+  }
+
+  return $result;
+}
+
+/**
+ * Switches between two environments.
+ *
+ * @param $target_env
+ *   Name of the environment to change to.
+ * @param $force
+ *   (optional) Whether to trigger a change even if the environment is the currently set one. Defaults to FALSE.
+ *
+ * @return
+ *   Return messages telling what has happened.
+ */
+function environment_switch($target_env, $force = FALSE) {
+  $result = FALSE;
+  $messages = array();
+
+  $current_env = environment_current();
+  if ($current_env != $target_env || $force) {
+    if (!environment_load($target_env)) {
+      $messages[] = "Environment {$target_env} doesn't exists.";
+    }
+    else {
+      variable_set('environment', $target_env);
+      $messages += module_invoke_all('environment_switch', $target_env, $current_env);
+      drupal_flush_all_caches();
+      $messages[] = 'Cleared cache';
+      $result = TRUE;
+    }
+  }
+
+  return array(
+    'result'   => $result,
+    'messages' => $messages,
+  );
+}
+
+/**
+ * Gets the current environment.
+ *
+ * @param $load
+ *  (default: FALSE) If TRUE, loads the full environment definition.
+ * @param $property
+ *  (default: NULL) If set, returns the specified element from the loaded object.
+ */
+function environment_current($load = FALSE, $property = NULL) {
+  $current = check_plain(variable_get('environment', NULL));
+  if (!$load) {
+    return $current;
+  }
+  $environment = environment_load($current);
+  if (!empty($environment)) {
+    return is_null($property) ? $environment : $environment[$property];
+  }
+  return is_null($property) ? NULL : t('None');
+}
+
+/**
+ * Fetches all available environments.
+ *
+ * @param $env
+ *   (optional) Name of the environment.
+ *
+ * @return
+ *   Return all environments or the specified environment.
+ */
+function environment_load($env = NULL) {
+  static $environments;
+
+  if (!isset($environments)) {
+    $environments  = module_invoke_all('environment');
+    $environments = array_merge($environments, variable_get('environment_definitions', array()));
+    drupal_alter('environment', $environments);
+  }
+
+  if ($env) {
+    return isset($environments[$env]) ? $environments[$env] : FALSE;
+  }
+  else {
+    return $environments;
+  }
+}
+
+/**
+ * Provides environment form options.
+ *
+ * @return
+ *  Array of form options in the style of environment => label
+ */
+function _environment_options() {
+  $options = array();
+  $environments = environment_load();
+  foreach ($environments as $name => $env) {
+    $options[$name] = $env['label'];
+  }
+  return $options;
+}
