@@ -60,7 +60,7 @@ function environment_environment() {
       ),
     ),
     'development' => array(
-      'label' => t('Develop'),
+      'label' => t('Development'),
       'allowed' => array(
         'default' => FALSE,
       ),
