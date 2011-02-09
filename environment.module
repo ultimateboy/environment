@@ -160,14 +160,16 @@ function environment_current($load = FALSE, $property = NULL) {
  *
  * @param $env
  *   (optional) Name of the environment.
+ * @param $reset
+ *   (default: FALSE) Reset the static cache and collect new data.
  *
  * @return
  *   Return all environments or the specified environment.
  */
-function environment_load($env = NULL) {
+function environment_load($env = NULL, $reset = FALSE) {
   static $environments;
 
-  if (!isset($environments)) {
+  if (!isset($environments) || $reset) {
     $environments  = module_invoke_all('environment');
     $environments = array_merge($environments, variable_get('environment_definitions', array()));
     drupal_alter('environment', $environments);
