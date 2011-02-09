@@ -12,23 +12,23 @@ function environment_drush_command() {
   $items = array();
 
   $items['environment'] = array(
-    'description' => 'Show the environment mode',
+    'description' => 'Show the current environment state.',
     'drupal dependencies' => array('environment'),
     'aliases' => array('env'),
   );
 
   $items['environment-switch'] = array(
-    'description' => 'Switch the environment to the given mode',
+    'description' => 'Switch the environment to specified state.',
     'drupal dependencies' => array('environment'),
     'arguments' => array(
-      'target_env' => 'The target environment to switch to',
+      'target_env' => 'The target environment to which the site will be switched.',
     ),
     'options' => array(
       '--force' => 'Whether an environment switch should be forced if the target enviornment is the same as the current environment.',
     ),
     'examples' => array(
-      'drush env-switch development' => 'Switch the environment to development',
-      'drush env-switch --force production' => 'Force the environment to switch to production even if the current environment already is production',
+      'drush environment-switch development' => 'Switch the environment to development.',
+      'drush env-switch --force production' => 'Force the environment to switch to production even if the current environment already is production.',
     ),
     'aliases' => array('env-switch'),
   );
@@ -52,50 +52,82 @@ function environment_drush_help($section) {
 }
 
 /**
- * Drush callback function to show environment
+ * Implementation of drush_hook_COMMAND for environment.
  */
 function drush_environment() {
-  drush_print(environment_current(TRUE, 'label'));
+  drush_print(environment_drush_render_environment());
 }
 
 /**
- * Drush callback function to switch an environment
+ * Implementation of drush_hook_COMMAND_validate() for environment_switch.
  */
-function drush_environment_switch() {
-  if ($args = func_get_args()) {
-    $force = drush_get_option('force');
+function drush_environment_switch_validate($target_env = NULL) {
+  $environments = environment_load();
+  if (empty($environments)) {
+    return drush_set_error('DRUSH_ENVIRONMENT_ERROR', dt('There are no defined environments available.'));
+  }
+}
 
-    $target_env   = $args[0];
-    $current_env  = environment_current();
-    $env_override = variable_get('environment_override', NULL);
-
-    if (!$force && $current_env == $target_env) {
-      drush_print("WARNING: The current environment is already set to '{$current_env}'.");
-      drush_print("To force the environment switch to run anyway, use the '--force' flag.");
+/**
+ * Implementation of drush_hook_COMMAND for environment_switch.
+ */
+function drush_environment_switch($target_env = NULL) {
+  if ($target_env && !array_key_exists($target_env, environment_load())) {
+    drush_set_error('DRUSH_ENVIRONMENT_ERROR', dt('Invalid environment specified.'));
+    $target_env = NULL;
+  }
+  if (!$target_env) {
+    $environments = environment_load();
+    $options = array();
+    foreach ($environments as $name => $env) {
+      $options[$name] = environment_drush_render_environment($name);
     }
-    else if (!$force && $env_override && $target_env != $env_override) {
-      drush_print("WARNING: The current environment is overriden with '{$env_override}'.");
-      drush_print("To force the environment switch to run anyway, use the '--force' flag.");
-    }
-    else {
-      drush_print("Switching the environment to {$target_env}...");
+    $target_env = drush_choice($options);
+  }
 
-      $result   = environment_switch($target_env, $force);
-      $messages = $result['messages'];
+  $force = drush_get_option('force');
+  $current_env  = environment_current();
+  $env_override = variable_get('environment_override', NULL);
 
-      foreach ($messages as $message) {
-        drush_print('- ' . $message);
-      }
+  if (!$force && $current_env == $target_env) {
+    drush_log("The current environment is already set to '{$current_env}'.", 'error');
+    drush_print("To force the environment switch to run anyway, use the '--force' flag.");
+    return;
+  }
+  elseif (!$force && $env_override && $target_env != $env_override) {
+    drush_log("The current environment is overriden with '{$env_override}'.", 'error');
+    drush_print("To force the environment switch to run anyway, use the '--force' flag.");
+    return;
+  }
 
-      if ($result['result']) {
-        drush_print("Done.");
-      }
-      else {
-        drush_print("Failed.");
-      }
-    }
+  drush_print("Switching the environment to {$target_env}...");
+
+  $result   = environment_switch($target_env, $force);
+  $messages = $result['messages'];
+
+  foreach ($messages as $message) {
+    drush_print('- ' . $message);
+  }
+
+  if ($result['result']) {
+    drush_log('Done.', 'success');
   }
   else {
-    return drush_set_error('DRUSH_ENVIRONMENT_ERROR', dt('You must provide the environment to switch to.'));
+    drush_log('Failed.', 'error');
   }
+}
+
+/**
+ * Helper function to render an environment as a descriptive one-liner.
+ *
+ * @param $env
+ *  Name of an environment to render.
+ *
+ * @return
+ *  String describing the environment.
+ */
+function environment_drush_render_environment($env = NULL) {
+  $environment = !$env ? environment_current(TRUE) : environment_load($env);
+  $description = isset($environment['description']) ? ': ' . $environment['description'] : '';
+  return $environment['label'] . ' (' . $environment['name'] . ')' . $description;
 }
