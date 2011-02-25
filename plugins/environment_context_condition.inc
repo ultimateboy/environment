@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * Defines a context condition for the current environment state.

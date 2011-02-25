@@ -1,5 +1,4 @@
 <?php
-// $Id$
 
 /**
  * @file Executes the environment_switch capabilities
