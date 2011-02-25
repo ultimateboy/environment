@@ -1,4 +1,3 @@
-; $Id$
 name = Environment
 description = Sets the environment variable for a site instance
 core = 6.x
