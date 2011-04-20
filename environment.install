@@ -25,9 +25,9 @@ function environment_uninstall() {
  * Implementation of hook_requirements().
  */
 function environment_requirements($phase) {
+  $requirements = array();
   if ($phase == 'runtime') {
     $t = get_t();
-    $requirements = array();
     if (variable_get('environment_require_override', FALSE)) {
       $requirements['environment_require_override'] = array(
         'title'       => $t('Environment Override'),
@@ -64,6 +64,6 @@ function environment_requirements($phase) {
         'severity'    => REQUIREMENT_INFO,
       );
     }
-    return $requirements;
   }
+  return $requirements;
 }
