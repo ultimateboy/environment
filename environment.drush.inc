@@ -58,9 +58,8 @@ function environment_drush_help($section) {
  * Implementation of drush_hook_COMMAND for environment.
  */
 function drush_environment_show($workflow = NULL) {
-  foreach (environment_drush_render_current($workflow) as $output) {
-    drush_print($output);
-  }
+  $func = drush_get_context('DRUSH_PIPE') ? 'drush_print_pipe' : 'drush_print_table';
+  $func(environment_drush_render_current($workflow));
 }
 
 /**
@@ -149,7 +148,12 @@ function environment_drush_render_current($workflow = NULL) {
   $items = array();
   foreach ($states as $state) {
     if (is_null($workflow) || $state['workflow'] == $workflow) {
-      $items[] = environment_drush_render_environment($state, is_null($workflow), TRUE);
+      if (!drush_get_context('DRUSH_PIPE')) {
+        $items[] = array(environment_drush_render_environment($state, is_null($workflow), TRUE));
+      }
+      else {
+        $items[] = $state['name'];
+      }
     }
   }
 
