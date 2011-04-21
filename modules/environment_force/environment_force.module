@@ -11,7 +11,7 @@
 function environment_force_init() {
   $env_override = variable_get('environment_override', NULL);
   if ($env_override) {
-    $current_env  = variable_get('environment', NULL);
+    $current_env  = environment_current();
     if ($current_env != $env_override) {
       environment_switch($env_override);
     }

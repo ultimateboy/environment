@@ -12,6 +12,9 @@ function environment_drush_command() {
 
   $items['environment'] = array(
     'description' => 'Show the current environment state.',
+    'arguments' => array(
+      'workflow' => 'Specify the workflow whose current environment state you wish to check. Leave blank for all workflows.',
+    ),
     'drupal dependencies' => array('environment'),
     'aliases' => array('env'),
   );
@@ -54,8 +57,10 @@ function environment_drush_help($section) {
 /**
  * Implementation of drush_hook_COMMAND for environment.
  */
-function drush_environment() {
-  drush_print(environment_drush_render_environment());
+function drush_environment($workflow = NULL) {
+  foreach (environment_drush_render_current($workflow) as $output) {
+    drush_print($output);
+  }
 }
 
 /**
@@ -80,7 +85,7 @@ function drush_environment_switch($target_env = NULL) {
     $environments = environment_load();
     $options = array();
     foreach ($environments as $name => $env) {
-      $options[$name] = environment_drush_render_environment($name);
+      $options[$name] = environment_drush_render_environment($env);
     }
     $target_env = drush_choice($options);
   }
@@ -126,16 +131,56 @@ function drush_environment_switch($target_env = NULL) {
 }
 
 /**
- * Helper function to render an environment as a descriptive one-liner.
+ * Render all current environment states with full description.
  *
- * @param $env
- *  Name of an environment to render.
- *
+ * @param $workflow
+ *  Optional; specify a single workflow whose environment to check. Otherwise
+ *  show all states.
+ * 
  * @return
- *  String describing the environment.
+ *  Array of strings describing the environment(s).
  */
-function environment_drush_render_environment($env = NULL) {
-  $environment = !$env ? environment_current(TRUE) : environment_load($env);
-  $description = isset($environment['description']) ? ': ' . $environment['description'] : '';
-  return $environment['label'] . ' (' . $environment['name'] . ')' . $description;
+function environment_drush_render_current($workflow = NULL) {
+  $environments = variable_get('environment', array());
+  foreach ($environments as $environment) {
+    $states[] = environment_load($environment);
+  }
+
+  $items = array();
+  foreach ($states as $state) {
+    if (is_null($workflow) || $state['workflow'] == $workflow) {
+      $items[] = environment_drush_render_environment($state, is_null($workflow), TRUE);
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Render the specified environment definition as a descriptive one-liner.
+ *
+ * @param $state
+ *  Array defining an environment state.
+ * @param $show_workflow
+ *  Optional; default to TRUE. If there are more than one workflows defined in
+ *  the system, will prefix the return with the workflow's label. If set to FALSE
+ *  this is skipped. This is separate from $verbose because you could want a
+ *  verbose description in a workflow-specific context.
+ * @param $verbose
+ *  Optional; defaults to FALSE. If TRUE, will include the environment
+ *  description.
+ * 
+ * @return
+ *  String describing the specified environment.
+ */
+function environment_drush_render_environment($state, $show_workflow = TRUE, $verbose = FALSE) {
+  $description = $verbose && isset($state['description']) ? ': ' . $state['description'] : '';
+  $prefix = '';
+
+  if ($show_workflow) {
+    $workflows = environment_workflow_load();
+    $prefix .= count($workflows) > 1 ? $workflows[$state['workflow']]['label'] . ' : ' : '';
+  }
+
+  return $prefix . $state['label'] . ' (' . $state['name'] . ')' . $description;
 }

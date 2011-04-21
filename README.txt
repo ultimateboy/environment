@@ -14,6 +14,12 @@ This module provides a UI to facilitate basic use, but is at heart a
 developer's module, providing the ability to perform site operations as 
 part of a state machine transition.
 
+Environment module now support now supports multiple environments per site. The
+"default" workflow environment is the same as previous module behavior, and
+includes the sample environment states of "development" and "production".
+Creating new workflows is a developer task, much as creating new environment
+states.
+
 USING DRUSH
 
 Environment provides two drush commands, 'environment' and 
@@ -28,6 +34,10 @@ FOR DEVELOPERS
 new environment states, hook_environment_alter() to tweak those 
 definitions, and hook_environment_switch() to trigger any environment 
 change operations defined in any module of your site.
+
+To create new workflows, implement hook_environment_workflow() and at least
+define a label element. To categorize an environment state as part of a given
+workflow, just add that element to the environment definition.
 
 The `environment_allowed()` function is a method for asserting behaviors 
 predefined as permitted or not permitted in the environment definition.
