@@ -10,13 +10,13 @@
 function environment_drush_command() {
   $items = array();
 
-  $items['environment'] = array(
+  $items['environment-show'] = array(
     'description' => 'Show the current environment state.',
     'arguments' => array(
       'workflow' => 'Specify the workflow whose current environment state you wish to check. Leave blank for all workflows.',
     ),
     'drupal dependencies' => array('environment'),
-    'aliases' => array('env'),
+    'aliases' => array('env', 'env-show'),
   );
 
   $items['environment-switch'] = array(
@@ -57,7 +57,7 @@ function environment_drush_help($section) {
 /**
  * Implementation of drush_hook_COMMAND for environment.
  */
-function drush_environment($workflow = NULL) {
+function drush_environment_show($workflow = NULL) {
   foreach (environment_drush_render_current($workflow) as $output) {
     drush_print($output);
   }
