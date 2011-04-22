@@ -59,12 +59,23 @@ function environment_admin_settings() {
  * Submit callback to switch environment if changed.
  */
 function environment_switch_environment_submit($form, &$form_state) {
-  if (!$form_state['values']['environment_require_override']
-    && $form['environment']['#default_value'] != $form_state['values']['environment']) {
-
-    $result = environment_switch($form_state['values']['environment'], $form['environment']['#default_value']);
-    foreach ($result['messages'] as $message) {
-      drupal_set_message(t(check_plain($message)));
+  if (!$form_state['values']['environment_require_override']) {
+    foreach (element_children($form['environment']) as $element) {
+      if ($form['environment'][$element]['#default_value'] != $form_state['values']['environment'][$element]) {
+        $result = environment_switch($form_state['values']['environment']);
+        if ($result) {
+          $original = environment_load($form['environment'][$element]['#default_value']);
+          $new = environment_load($form_state['values']['environment'][$element]);
+          $workflow = environment_workflow_load($element);
+          drupal_set_message(t("Successfully switched @workflow workflow from the '@original' to the '@new' environment.",
+                               array(
+                                '@workflow' => $workflow['label'],
+                                '@original' => $original['label'],
+                                '@new' => $new['label'],
+                               ))
+                            );
+        }
+      }
     }
   }
 }
