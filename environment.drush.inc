@@ -121,7 +121,7 @@ function drush_environment_switch($target_env = NULL) {
  *  Array of strings describing the environment(s).
  */
 function environment_drush_render_current($workflow = NULL) {
-  $environments = variable_get('environment', array());
+  $environments = (array) variable_get('environment', array());
   foreach ($environments as $environment) {
     $states[] = environment_load($environment);
   }
