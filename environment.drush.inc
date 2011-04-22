@@ -16,7 +16,7 @@ function environment_drush_command() {
       'workflow' => 'Specify the workflow whose current environment state you wish to check. Leave blank for all workflows.',
     ),
     'drupal dependencies' => array('environment'),
-    'aliases' => array('env', 'env-show'),
+    'aliases' => array('env', 'env-show', 'environment'),
   );
 
   $items['environment-switch'] = array(
