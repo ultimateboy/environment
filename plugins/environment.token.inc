@@ -26,7 +26,7 @@ function environment_token_values($type, $object = NULL, $options = array()) {
   $values = array();
   if ($type == 'global') {
     foreach (environment_workflow_load() as $name => $workflow) {
-      $state = environment_current($name, TRUE);
+      $state = environment_current($name, NULL, TRUE);
       $values['environment_' . $name] = $state['name'];
       $values['environment_' . $name . '-label'] = $state['label'];
     }

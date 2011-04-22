@@ -25,7 +25,7 @@ function environment_admin_settings() {
   }
   else {
     $form['environment'] = array(
-      '#title' => t('Environment by workflow'),
+      '#title' => t('Environment state'),
       '#type' => 'fieldset',
       '#tree' => TRUE,
     );    
@@ -35,7 +35,6 @@ function environment_admin_settings() {
         '#title' => t('@workflow environment workflow', array('@workflow' => $workflow['label'])),
         '#description'   => $workflow['description'], 
         '#type'          => 'select',
-        '#title'         => t('Environment'),
         '#options'       => _environment_state_options($name),
         '#default_value' => $default,
       );

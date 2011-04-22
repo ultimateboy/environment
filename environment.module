@@ -94,7 +94,7 @@ function environment_environment_workflow() {
  *   TRUE or FALSE for whether the thing is allowed.
  */
 function environment_allowed($name, $category = 'other', $default = FALSE, $workflow = 'default') {
-  $env = environment_current($workflow, TRUE);
+  $env = environment_current($workflow, NULL, TRUE);
   if (!empty($env)) {
     if (!empty($env[$category])) {
       if (isset($env[$category][$name])) {
@@ -176,23 +176,28 @@ function environment_switch($target_env, $force = FALSE) {
  *  return the current environment state for each workflow. Default workflow
  *  will check environment states not assigned an explicit workflow, this
  *  maintains backwards compatibility.
+ * @param $default
+ *  Optional; defaults to NULL. Specify the default value if the current
+ *  environment cannot be identified.
  * @param $load
  *  (default: FALSE) If TRUE, loads the full environment definition.
  */
-function environment_current($workflow = 'default', $load = FALSE) {
+function environment_current($workflow = 'default', $default = NULL, $load = FALSE) {
   $current = variable_get('environment', array());
   if (!is_array($current)) {
     $current = array('default' => $current);
   }
 
   if (is_null($workflow)) {
+    $current = empty($current) ? $default : $current;
     return $load ? environment_load($current) : $current;
   }
   elseif(isset($current[$workflow])) {
-    return $load ? environment_load($current) : $current[$workflow];
+    $current[$workflow] = empty($current[$workflow]) ? $default : $current[$workflow];
+    return $load ? environment_load($current[$workflow]) : $current[$workflow];
   }
   
-  return '';
+  return $default;
 }
 
 /**
