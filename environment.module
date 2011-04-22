@@ -133,24 +133,39 @@ function environment_switch($target_env, $force = FALSE) {
   $target_state = environment_load($target_env);
   $workflow = $target_state['workflow'];
   $current_env = environment_current($workflow);
-  
-  if ($current_env != $target_env || $force) {
-    if (!$target_state) {
-      $messages[] = "Environment {$target_env} doesn't exist.";
+  $override = variable_get('environment_override', '');
+
+  if ($current_env == $target_env) {
+    drupal_set_message(t("The current environment is already set to '!environment'.",
+                         array('!environment' => $target_env)), 'error');
+    // Since this option is only available in drush, only display it to drush users.
+    if (function_exists('drush_print')) {
+      drush_print("To force the environment switch to run anyway, use the '--force' flag.");
+    }
+  }
+  if (!$force && !empty($override)) {
+    drupal_set_message(t("The current environment is overriden with '!override'.",
+                         array('!override' => $override)), 'error');
+    // Since this option is only available in drush, only display it to drush users.
+    if (function_exists('drush_print')) {
+      drush_print("To force the environment switch to run anyway, use the '--force' flag.");
+    }
+  }
+  elseif ($current_env != $target_env || $force) {
+    if (empty($target_state)) {
+      drupal_set_message(t('Environment !environment does not exist.',
+                           array('!environment' => $target_env)), 'warning');
     }
     else {
       environment_set($target_env);
-      $messages += module_invoke_all('environment_switch', $target_env, $current_env, $workflow);
+      module_invoke_all('environment_switch', $target_env, $current_env, $workflow);
       drupal_flush_all_caches();
-      $messages[] = 'Cleared cache';
+      drupal_set_message('Cleared cache.');
       $result = TRUE;
     }
   }
 
-  return array(
-    'result'   => $result,
-    'messages' => $messages,
-  );
+  return $result;
 }
 
 /**
@@ -258,6 +273,8 @@ function environment_workflow_load($name = NULL, $reset = FALSE) {
 
   return isset($name) ? $workflows[$name] : $workflows;
 }
+
+
 
 /**
  * Provides environment form options.

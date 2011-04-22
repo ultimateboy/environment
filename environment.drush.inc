@@ -93,39 +93,20 @@ function drush_environment_switch($target_env = NULL) {
   }
 
   $force = drush_get_option('force');
-  $current_env  = environment_current();
-  $env_override = variable_get('environment_override', NULL);
 
-  if (!$force && $current_env == $target_env) {
-    drush_log("The current environment is already set to '{$current_env}'.", 'error');
-    drush_print("To force the environment switch to run anyway, use the '--force' flag.");
-    return;
-  }
-  elseif (!$force && $env_override && $target_env != $env_override) {
-    drush_log("The current environment is overriden with '{$env_override}'.", 'error');
-    drush_print("To force the environment switch to run anyway, use the '--force' flag.");
-    return;
-  }
-
-  drush_print("Switching the environment to {$target_env}...");
-
+  drush_print(dt("Switching the environment to !environment", array('!environment' => $target_env)));
   if (!drush_get_context('DRUSH_SIMULATE')) {
-    $result   = environment_switch($target_env, $force);
-    $messages = $result['messages'];
-
-    foreach ($messages as $message) {
-      drush_print('- ' . $message);
-    }
+    $result = environment_switch($target_env, $force);
   }
   else {
-    $result['result'] = TRUE;
+    $result = TRUE;
   }
 
-  if ($result['result']) {
-    drush_log('Done.', 'success');
+  if ($result) {
+    drupal_set_message('Done.', 'success');
   }
   else {
-    drush_log('Failed.', 'error');
+    drupal_set_message('Failed.', 'error');
   }
 }
 
