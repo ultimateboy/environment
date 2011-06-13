@@ -43,20 +43,15 @@ function hook_environment_switch($target_env, $current_env, $workflow = NULL) {
     'devel_node_access',
   );
 
-  if ($workflow == 'test') {
-    return '- If this were a real workflow, I would have done stuff.';
-  }
-
-  // Disable all devel modules for production mode.
-  if ($target_env == 'production') {
-    module_disable($devel_modules);
-    return '- Disabled development modules';
-  }
-
-  // Enable the modules in any other mode.
-  elseif ($current_env == 'production') {
-    module_enable($devel_modules);
-    return '- Reenabled development modules';
+  switch ($target_env) {
+    case 'production':
+      module_disable($devel_modules);
+      drupal_set_message('Disabled development modules');
+      return;
+    case 'development':
+      module_enable($devel_modules);
+      drupal_set_message('Enabled development modules');
+      return;
   }
 }
 
