@@ -28,7 +28,7 @@ function environment_init() {
  */
 function environment_menu() {
   $items = array();
-  $items['admin/settings/environment'] = array(
+  $items['admin/config/environment'] = array(
     'title'            => 'Environment',
     'description'      => 'Settings for Environment.',
     'page callback'    => 'drupal_get_form',
@@ -36,7 +36,7 @@ function environment_menu() {
     'access arguments' => array('administer site configuration'),
     'file'             => 'environment.admin.inc',
   );
-  $items['admin/settings/environment/switch/%environment'] = array(
+  $items['admin/config/environment/switch/%environment'] = array(
     'title'            => 'Environment Switch',
     'description'      => 'Switch the current environment.',
     'page callback'    => 'drupal_get_form',
@@ -74,6 +74,7 @@ function environment_environment_workflow() {
   return array(
     'default' => array(
       'label' => t('Default'),
+      'description' => t(''),
     ),
   );
 }
