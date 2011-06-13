@@ -8,14 +8,18 @@
 if (module_exists('context')) {
   include_once('plugins/environment.context.inc');
 }
+if (module_exists('token')) {
+  include_once('plugins/environment.token.inc');  
+}
 
 /**
  * Implementation of hook_init().
  */
 function environment_init() {
   // Trigger environment context condition.
-  if (module_exists('context') && $plugin = context_get_plugin('condition', 'environment')) {
-    $plugin->execute(environment_current());
+  if (module_exists('context') && function_exists('context_get_plugin')
+      && $plugin = context_get_plugin('condition', 'environment')) {
+    $plugin->execute((array)variable_get('environment', array()));
   }
 }
 
@@ -55,10 +59,21 @@ function environment_environment() {
       ),
     ),
     'development' => array(
-      'label' => t('Develop'),
+      'label' => t('Development'),
       'allowed' => array(
         'default' => FALSE,
       ),
+    ),
+  );
+}
+
+/**
+ * Implementation of hook_environment_workflow().
+ */
+function environment_environment_workflow() {
+  return array(
+    'default' => array(
+      'label' => t('Default'),
     ),
   );
 }
@@ -69,15 +84,17 @@ function environment_environment() {
  * @param $name
  *   Name of the thing to check if allowed, eg. function.
  * @param $category
- *   (optional) Category of the thing to check for, eg. name of module. Defaults to 'other'.
+ *   Optional; category of the thing to check for, eg. name of module. Defaults to 'other'.
  * @param $default
- *   (optional) What the default should be if no environment value is found. Defaults to FALSE.
+ *   Optional; what the default should be if no environment value is found. Defaults to FALSE.
+ * @param $workflow
+ *   Optional; specify the workflow state to check for allowance.
  *
  * @return
  *   TRUE or FALSE for whether the thing is allowed.
  */
-function environment_allowed($name, $category = 'other', $default = FALSE) {
-  $env = environment_current(TRUE);
+function environment_allowed($name, $category = 'other', $default = FALSE, $workflow = 'default') {
+  $env = environment_current($workflow, NULL, TRUE);
   if (!empty($env)) {
     if (!empty($env[$category])) {
       if (isset($env[$category][$name])) {
@@ -113,83 +130,206 @@ function environment_switch($target_env, $force = FALSE) {
   $result = FALSE;
   $messages = array();
 
-  $current_env = environment_current();
-  if ($current_env != $target_env || $force) {
-    if (!environment_load($target_env)) {
-      $messages[] = "Environment {$target_env} doesn't exists.";
+  $target_state = environment_load($target_env);
+  $workflow = $target_state['workflow'];
+  $current_env = environment_current($workflow);
+  $override = variable_get('environment_override', '');
+
+  if ($current_env == $target_env) {
+    drupal_set_message(t("The current environment is already set to '!environment'.",
+                         array('!environment' => $target_env)), 'error');
+    // Since this option is only available in drush, only display it to drush users.
+    if (function_exists('drush_print')) {
+      drush_print("To force the environment switch to run anyway, use the '--force' flag.");
+    }
+  }
+  if (!$force && !empty($override)) {
+    drupal_set_message(t("The current environment is overriden with '!override'.",
+                         array('!override' => $override)), 'error');
+    // Since this option is only available in drush, only display it to drush users.
+    if (function_exists('drush_print')) {
+      drush_print("To force the environment switch to run anyway, use the '--force' flag.");
+    }
+  }
+  elseif ($current_env != $target_env || $force) {
+    if (empty($target_state)) {
+      drupal_set_message(t('Environment !environment does not exist.',
+                           array('!environment' => $target_env)), 'warning');
     }
     else {
-      variable_set('environment', $target_env);
-      $messages += module_invoke_all('environment_switch', $target_env, $current_env);
+      environment_set($target_env);
+      module_invoke_all('environment_switch', $target_env, $current_env, $workflow);
       drupal_flush_all_caches();
-      $messages[] = 'Cleared cache';
+      drupal_set_message('Cleared cache.');
       $result = TRUE;
     }
   }
 
-  return array(
-    'result'   => $result,
-    'messages' => $messages,
-  );
+  return $result;
 }
 
 /**
  * Gets the current environment.
  *
+ * @param $workflow
+ *  (default: default) Specify an environment workflow to check. If NULL, will
+ *  return the current environment state for each workflow. Default workflow
+ *  will check environment states not assigned an explicit workflow, this
+ *  maintains backwards compatibility.
+ * @param $default
+ *  Optional; defaults to NULL. Specify the default value if the current
+ *  environment cannot be identified.
  * @param $load
  *  (default: FALSE) If TRUE, loads the full environment definition.
- * @param $property
- *  (default: NULL) If set, returns the specified element from the loaded object.
  */
-function environment_current($load = FALSE, $property = NULL) {
-  $current = check_plain(variable_get('environment', NULL));
-  if (!$load) {
-    return $current;
+function environment_current($workflow = 'default', $default = NULL, $load = FALSE) {
+  $current = variable_get('environment', array());
+  if (!is_array($current)) {
+    $current = array('default' => $current);
   }
-  $environment = environment_load($current);
-  if (!empty($environment)) {
-    return is_null($property) ? $environment : $environment[$property];
+
+  if (is_null($workflow)) {
+    $current = empty($current) ? $default : $current;
+    return $load ? environment_load($current) : $current;
   }
-  return is_null($property) ? NULL : t('None');
+  elseif(isset($current[$workflow])) {
+    $current[$workflow] = empty($current[$workflow]) ? $default : $current[$workflow];
+    return $load ? environment_load($current[$workflow]) : $current[$workflow];
+  }
+  
+  return $default;
+}
+
+/**
+ * Save the new environment to it's assigned workflow.
+ *
+ * @param $new_env
+ *  Machine name of the new system environment. If environment has a workflow
+ */
+function environment_set($new_env) {
+  $environment = variable_get('environment', array());
+  $new_state = environment_load($new_env);
+  
+  // Maintain backwards compatibility with pre-workflow systems.
+  if (!is_array($environment)) {
+    $environment = array('default' => $environment);
+  }
+
+  $environment[$new_state['workflow']] = $new_state['name'];
+  variable_set('environment', $environment);
 }
 
 /**
  * Fetches all available environments.
  *
  * @param $env
- *   (optional) Name of the environment.
+ *   (optional) Name of the environment. If NULL, will return all environments.
+ *   If an array, will return all environments specified in the array.
+ * @param $reset
+ *   (default: FALSE) Reset the static cache and collect new data.
  *
  * @return
  *   Return all environments or the specified environment.
  */
-function environment_load($env = NULL) {
+function environment_load($env = NULL, $reset = FALSE) {
   static $environments;
 
-  if (!isset($environments)) {
+  if (!isset($environments) || $reset) {
     $environments  = module_invoke_all('environment');
     $environments = array_merge($environments, variable_get('environment_definitions', array()));
+    foreach ($environments as $name => $environment) {
+      $environments[$name]['name'] = $name;
+      if (!isset($environments[$name]['workflow'])) {
+        $environments[$name]['workflow'] = 'default';
+      }
+    }
     drupal_alter('environment', $environments);
   }
 
-  if ($env) {
-    return isset($environments[$env]) ? $environments[$env] : FALSE;
+  if (empty($env)) {
+    return $environments;
+  }
+  elseif (is_array($env)) {
+    return array_intersect_key($environments, array_flip($env));
   }
   else {
-    return $environments;
+    return isset($environments[$env]) ? $environments[$env] : FALSE;
   }
 }
 
 /**
+ * Get the current assortment of Workflows.
+ *
+ * @param $name
+ *  Name of the workflow to retrieve information on.
+ *  Use 'default' to specify default or NULL workflow.
+ * @param $reset
+ *  Optional; reset the static cache.
+ *
+ * @return Array
+ */
+function environment_workflow_load($name = NULL, $reset = FALSE) {
+  static $workflows;
+  
+  if (empty($workflows) || $reset) {
+    $workflows = module_invoke_all('environment_workflow');
+    drupal_alter('environment_workflow', $workflows);
+  }
+
+  return isset($name) ? $workflows[$name] : $workflows;
+}
+
+
+
+/**
  * Provides environment form options.
+ *
+ * @param $workflow
+ *  Optional; specify the workflow for specific options. Defaults to states
+ *  that are not part of an explicit workflow.
+ * @param $prefix
+ *  Optional; prefix the environment label with the specified string. Defaults
+ *  to no prefix.
+ * @param $reset
+ *  Optional; reset the static cache.
  *
  * @return
  *  Array of form options in the style of environment => label
  */
-function _environment_options() {
-  $options = array();
-  $environments = environment_load();
-  foreach ($environments as $name => $env) {
-    $options[$name] = $env['label'];
+function _environment_state_options($workflow = 'default', $prefix = '', $reset = FALSE) {
+  static $options;
+  
+  if (empty($options) || $reset) {
+    $environments = environment_load();
+    foreach ($environments as $name => $state) {
+      $options[$state['workflow']][$name] = $prefix . $state['label'];
+    }
   }
+
+  return empty($options[$workflow]) ? array() : $options[$workflow];
+}
+
+/**
+ * Build an options widget with all workflows.
+ *
+ * Options do not need namespacing because environment machine name is unique.
+ * If the same environment needs to come up in multiple places, that should be
+ * handled by duplicating the definition and changing the machine name.
+ *
+ * @param $reset
+ *  Optional; reset the static cache.
+ *
+ * @see hook_environment
+ */
+function _environment_state_options_all($reset = FALSE) {
+  $options = array();
+
+  $workflows = environment_workflow_load();
+  foreach ($workflows as $name => $workflow) {
+    $options[$name] = $workflow['label'];
+    $w_opts = _environment_state_options($workflow, TRUE, '-- ', $reset);
+    $options = array_merge($options, $w_opts);
+  }
+  
   return $options;
 }
