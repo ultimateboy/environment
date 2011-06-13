@@ -119,9 +119,9 @@ function environment_allowed($name, $category = 'other', $default = FALSE, $work
 /**
  * Switches between two environments.
  *
- * @param $target_env
+ * @param String $target_env
  *   Name of the environment to change to.
- * @param $force
+ * @param Boolean $force
  *   (optional) Whether to trigger a change even if the environment is the currently set one. Defaults to FALSE.
  *
  * @return

@@ -61,7 +61,7 @@ function environment_switch_environment_submit($form, &$form_state) {
   if (!$form_state['values']['environment_require_override']) {
     foreach (element_children($form['environment']) as $element) {
       if ($form['environment'][$element]['#default_value'] != $form_state['values']['environment'][$element]) {
-        $result = environment_switch($form_state['values']['environment']);
+        $result = environment_switch($form_state['values']['environment'][$element]);
         if ($result) {
           $original = environment_load($form['environment'][$element]['#default_value']);
           $new = environment_load($form_state['values']['environment'][$element]);
