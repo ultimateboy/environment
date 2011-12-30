@@ -27,6 +27,7 @@ function environment_drush_command() {
     ),
     'options' => array(
       '--force' => 'Whether an environment switch should be forced if the target enviornment is the same as the current environment.',
+      '--nocache' => 'Switching environments clears the cache by default, this stops that.',
     ),
     'examples' => array(
       'drush environment-switch development' => 'Switch the environment to development.',
@@ -93,10 +94,11 @@ function drush_environment_switch($target_env = NULL) {
   }
 
   $force = drush_get_option('force');
+  $nocache = drush_get_option('nocache');
 
   drush_print(dt("Switching the environment to !environment", array('!environment' => $target_env)));
   if (!drush_get_context('DRUSH_SIMULATE')) {
-    $result = environment_switch($target_env, $force);
+    $result = environment_switch($target_env, $force, !$nocache);
   }
   else {
     $result = TRUE;

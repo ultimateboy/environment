@@ -127,7 +127,7 @@ function environment_allowed($name, $category = 'other', $default = FALSE, $work
  * @return
  *   Return messages telling what has happened.
  */
-function environment_switch($target_env, $force = FALSE) {
+function environment_switch($target_env, $force = FALSE, $clear_cache = TRUE) {
   $result = FALSE;
   $messages = array();
 
@@ -160,8 +160,10 @@ function environment_switch($target_env, $force = FALSE) {
     else {
       environment_set($target_env);
       module_invoke_all('environment_switch', $target_env, $current_env, $workflow);
-      drupal_flush_all_caches();
-      drupal_set_message('Cleared cache.');
+      if ($clear_cache) {
+        drupal_flush_all_caches();
+        drupal_set_message('Cleared cache.');
+      }
       $result = TRUE;
     }
   }
