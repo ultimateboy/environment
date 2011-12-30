@@ -94,19 +94,28 @@ function drush_environment_switch($target_env = NULL) {
 
   $force = drush_get_option('force');
 
-  drush_print(dt("Switching the environment to !environment", array('!environment' => $target_env)));
-  if (!drush_get_context('DRUSH_SIMULATE')) {
-    $result = environment_switch($target_env, $force);
+  drush_log(dt("Switching the environment to !environment", array('!environment' => $target_env)), 'status');
+  try {
+    if (drush_get_context('DRUSH_SIMULATE')) {
+      throw new Exception("Done", 200);
+    }
+    environment_switch($target_env, $force);
   }
-  else {
-    $result = TRUE;
-  }
-
-  if ($result) {
-    drupal_set_message('Done.', 'success');
-  }
-  else {
-    drupal_set_message('Failed.', 'error');
+  catch (Exception $e) {
+    switch ($e->getCode()) {
+      case 500:
+        drush_set_error($e->getMessage());
+        break;
+      case 304:
+      case 403:
+        drush_log($e->getMessage(), 'status');
+        break;
+      case 200:
+        drush_log($e->getMessage(), 'success');
+        break;
+      default:
+        drush_set_error(t("Unknown status: @code: @message", array('@code' => $e->getCode(), '@message' => $e->getMessage())));
+    }
   }
 }
 

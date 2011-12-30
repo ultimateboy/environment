@@ -58,22 +58,31 @@ function environment_admin_settings() {
  * Submit callback to switch environment if changed.
  */
 function environment_switch_environment_submit($form, &$form_state) {
-  if (!$form_state['values']['environment_require_override']) {
-    foreach (element_children($form['environment']) as $element) {
-      if ($form['environment'][$element]['#default_value'] != $form_state['values']['environment'][$element]) {
-        $result = environment_switch($form_state['values']['environment'][$element]);
-        if ($result) {
-          $original = environment_load($form['environment'][$element]['#default_value']);
-          $new = environment_load($form_state['values']['environment'][$element]);
-          $workflow = environment_workflow_load($element);
-          drupal_set_message(t("Successfully switched @workflow workflow from the '@original' to the '@new' environment.",
-                               array(
-                                '@workflow' => $workflow['label'],
-                                '@original' => $original['label'],
-                                '@new' => $new['label'],
-                               ))
-                            );
-        }
+  if ($form_state['values']['environment_require_override']) {
+    return;
+  }
+  foreach (element_children($form['environment']) as $element) {
+    // Don't bother switching the environment if already in the right state.
+    if ($form['environment'][$element]['#default_value'] == $form_state['values']['environment'][$element]) {
+      continue;
+    }
+    try {
+      environment_switch($form_state['values']['environment'][$element]);
+    }
+    catch (Exception $e) {
+      switch ($e->getCode()) {
+        case 500:
+          drupal_set_message($e->getMessage(), 'error');
+          break;
+        case 304:
+        case 403:
+          drupal_set_message($e->getMessage(), 'warning');
+          break;
+        case 200:
+          drupal_set_message($e->getMessage(), 'success');
+          break;
+        default:
+          drupal_set_message(t("Unknown status: @code: @message", array('@code' => $e->getCode(), '@message' => $e->getMessage())), 'error');
       }
     }
   }
